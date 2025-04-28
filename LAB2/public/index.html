@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Лічильники "День-Ніч"</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Введіть показники лічильника</h1>
+    <form id="meterForm">
+        <input type="text" name="meterId" placeholder="Номер лічильника" required />
+        <input type="number" name="dayValue" placeholder="Показник день" required />
+        <input type="number" name="nightValue" placeholder="Показник ніч" required />
+        <button type="submit">Надіслати</button>
+    </form>
+
+    <div id="response"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
