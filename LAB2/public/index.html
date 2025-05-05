@@ -1,21 +1,102 @@
 <!DOCTYPE html>
 <html lang="uk">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Лічильники "День-Ніч"</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <h1>Введіть показники лічильника</h1>
-    <form id="meterForm">
-        <input type="text" name="meterId" placeholder="Номер лічильника" required />
-        <input type="number" name="dayValue" placeholder="Показник день" required />
-        <input type="number" name="nightValue" placeholder="Показник ніч" required />
-        <button type="submit">Надіслати</button>
-    </form>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Лічильники "День-Ніч"</h1>
+      <nav>
+        <ul>
+          <li><button id="addMeterBtn">Додати лічильник</button></li>
+          <li><button id="updateMeterBtn">Ввести нову інформацію</button></li>
+          <li><button id="historyMeterBtn">Проглянути історію</button></li>
+        </ul>
+        <div id="navDropdown" class="dropdown-content">
+          <button id="closeDropdown">Закрити меню</button>
+        </div>
+      </nav>
+    </header>
 
-    <div id="response"></div>
+    <main>
+      <!-- Додати лічильник -->
+      <section id="addMeterSection" class="sectionContent">
+        <h2>Додати новий лічильник</h2>
+        <form id="addMeterForm">
+          <input
+            type="text"
+            id="meterId"
+            placeholder="ID лічильника"
+            required
+          />
+          <input
+            type="number"
+            id="dayValue"
+            placeholder="Показник день"
+            required
+          />
+          <input
+            type="number"
+            id="nightValue"
+            placeholder="Показник ніч"
+            required
+          />
+          <button type="submit" id="submitAdd">Додати</button>
+        </form>
+        <div id="addMeterMessage"></div>
+      </section>
+
+      <!-- Оновити інформацію -->
+      <section id="updateMeterSection" class="sectionContent">
+        <h2>Оновити інформацію лічильника</h2>
+        <form id="updateMeterForm">
+          <input
+            type="text"
+            id="updateMeterId"
+            list="meterIdList"
+            placeholder="ID лічильника для оновлення"
+            required
+          />
+          <datalist id="meterIdList"></datalist>
+
+          <input
+            type="number"
+            id="updateDayValue"
+            placeholder="Показник день"
+            required
+          />
+          <input
+            type="number"
+            id="updateNightValue"
+            placeholder="Показник ніч"
+            required
+          />
+          <button type="submit" id="submitUpdate">Оновити</button>
+        </form>
+        <div id="updateMeterMessage"></div>
+      </section>
+
+      <!-- Історія лічильників -->
+      <section id="historyMeterSection" class="sectionContent">
+        <h2>Історія лічильників</h2>
+        <form id="historyForm">
+          <input
+            type="text"
+            id="historyMeterId"
+            list="meterIdList"
+            placeholder="ID лічильника для історії"
+            required
+          />
+          <datalist id="meterIdList"></datalist>
+          <button type="submit" id="submitHistory">Пошук історії</button>
+        </form>
+        <div id="historyTable"></div>
+      </section>
+    </main>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

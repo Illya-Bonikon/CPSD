@@ -1,20 +1,129 @@
+/* Основний стиль */
 body {
     font-family: Arial, sans-serif;
-    margin: 30px;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+}
+
+header {
+    background-color: #333;
+    color: white;
+    padding: 15px 30px;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+}
+
+nav {
+    position: relative;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #5c5c5c;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #333;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    display: inline;
+    margin: 10px;
+}
+
+#navDropdown {
+    display: none;
+    background-color: #333;
+    position: absolute;
+    top: 40px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+}
+
+.dropdown-content {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+}
+
+#closeDropdown {
+    background-color: #e74c3c;
+    padding: 10px;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#closeDropdown:hover {
+    background-color: #c0392b;
+}
+
+main {
+    padding: 20px;
+}
+
+.sectionContent {
+    display: none;
+    margin-top: 20px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 form {
     display: flex;
     flex-direction: column;
-    width: 300px;
 }
 
-input, button {
-    margin: 10px 0;
+input {
     padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }
 
-#response {
+input[type="text"], input[type="number"] {
+    width: 100%;
+}
+
+button[type="submit"] {
+    margin-top: 10px;
+    background-color: #28a745;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button[type="submit"]:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}
+
+button[type="submit"]:hover {
+    background-color: #218838;
+}
+
+#errorMessage {
+    color: red;
+    margin-top: 10px;
+}
+
+#addMeterMessage, #updateMeterMessage {
     margin-top: 20px;
     font-weight: bold;
+    color: green;
 }

@@ -1,41 +1,65 @@
-const { updateMeterData, addNewMeter } = require("../services/meterService");
-const meters = require("../models/meterModel");
+const meterService = require("../services/meterService");
 
-function getAllMeterData(httpRequest, httpResponse) {
-	const result = getAllMeters();
-	if (result.error) {
-	  httpResponse.status(404).json({ error: result.error });
-	} else {
-	  httpResponse.json(result);
+async function handleMeterData(req, res) {
+  try {
+    const { meterId, newDayReading, newNightReading } = req.body;
+    const result = await meterService.updateMeterData(meterId, newDayReading, newNightReading);
+    res.json(result);
+  } catch (error) {
+    console.error("Помилка обробки даних лічильника:", error);
+    res.status(500).json({ error: "Помилка сервера" });
+  }
+}
+
+async function handleNewMeter(req, res) {
+  try {
+    const { meterId, dayReading, nightReading } = req.body;
+    const result = await meterService.addNewMeter(meterId, dayReading, nightReading);
+    res.json(result);
+  } catch (error) {
+    console.error("Помилка додавання нового лічильника:", error);
+    res.status(500).json({ error: "Помилка сервера" });
+  }
+}
+
+async function getAllMeterData(req, res) {
+  try {
+    const meters = await meterService.getAllMeters();
+    res.json(meters);
+  } catch (error) {
+    console.error("Помилка отримання лічильників:", error);
+    res.status(500).json({ error: "Помилка сервера" });
+  }
+}
+async function getAllMeterIds(req, res) {
+	try {
+	  const ids = await meterService.getAllMeterIds();
+	  res.json(ids);
+	} catch (error) {
+	  console.error("Помилка отримання ID:", error);
+	  res.status(500).json({ error: "Помилка сервера" });
+	}
+  }
+  
+async function getMeterHistory(req, res) {
+	try {
+		const meterId = req.params.meterId;
+		const history = await meterService.getMeterHistory(meterId);
+		if (!history.length) {
+		return res.status(404).json({ error: "Дані не знайдено" });
+		}
+		res.json(history);
+	} catch (error) {
+		console.error("Помилка історії:", error);
+		res.status(500).json({ error: "Помилка сервера" });
 	}
 }
 
-function handleMeterData(httpRequest, httpResponse) {
-  const { meterId, newDayReading, newNightReading } = httpRequest.body;
-  console.log("Received data for updating meter:", { meterId, newDayReading, newNightReading });
-
-  const result = updateMeterData(meterId, newDayReading, newNightReading);
-  console.log("Update result:", result);
-
-  if (result.error) 
-    httpResponse.status(404).json({ error: result.error });
-  else 
-    httpResponse.json(result);
-
-}
-
-function handleNewMeter(httpRequest, httpResponse) {
-  const { meterId, dayReading, nightReading } = httpRequest.body;
-  console.log("Received data for new meter:", { meterId, dayReading, nightReading });
-
-  const result = addNewMeter(meterId, dayReading, nightReading);
-  console.log("New meter result:", result);
-
-  httpResponse.json(result);
-}
 
 module.exports = {
-	getAllMeterData,
-	handleMeterData,
-	handleNewMeter
+  handleMeterData,
+  handleNewMeter,
+  getAllMeterData,
+  getAllMeterIds,
+  getMeterHistory
 };

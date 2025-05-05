@@ -1,24 +1,38 @@
-// TODO: make mongoose model for meter
-const meters = [
-	{
-	  meterId: 'MTR-001',
-	  previousDayReading: 100,
-	  previousNightReading: 80,
-	  currentDayReading: 120,
-	  currentNightReading: 100,
-	  date: '2025-04-28T10:00:00',
-	  totalAmount: 0
-	},
-	{
-	  meterId: 'MTR-002',
-	  previousDayReading: 150,
-	  previousNightReading: 130,
-	  currentDayReading: 180,
-	  currentNightReading: 150,
-	  date: '2025-04-28T10:30:00',
-	  totalAmount: 0
-	}
-];
+const mongoose = require("mongoose");
 
-module.exports = meters;
-  
+const meterSchema = new mongoose.Schema({
+  meterId: {
+    type: String,
+    required: true,
+    unique: true,
+	index: true,
+  },
+  previousDayReading: {
+    type: Number,
+    default: 0,
+  },
+  previousNightReading: {
+    type: Number,
+    default: 0,
+  },
+  currentDayReading: {
+    type: Number,
+    required: true,
+  },
+  currentNightReading: {
+    type: Number,
+    required: true,
+  },
+  totalAmount: {
+    type: Number,
+    default: 0,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  }
+});
+
+const Meter = mongoose.model("Meter", meterSchema);
+
+module.exports = Meter;
