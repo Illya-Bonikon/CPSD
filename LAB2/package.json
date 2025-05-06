@@ -15,5 +15,10 @@
   "dependencies": {
     "express": "^5.1.0",
     "mongoose": "^8.14.0"
+  },
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "mocha": "^11.2.2",
+    "supertest": "^7.1.0"
   }
 }

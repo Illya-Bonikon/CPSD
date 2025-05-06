@@ -1,11 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const meterController = require("../controllers/meterController");
+const {
+	handleMeterData,
+	handleNewMeter,
+	getAllMeterIds,
+	getMeterHistory,
+	getLatestReadings
+} = require("../controllers/meterController");
 
-router.post("/update", meterController.handleMeterData);   
-router.post("/new", meterController.handleNewMeter);       
-router.get("/", meterController.getAllMeterData);  
-router.get("/ids", meterController.getAllMeterIds);
-router.get("/:meterId/history", meterController.getMeterHistory);
+router
+	.post("/add-data", handleMeterData)
+	.post("/new", handleNewMeter)
+	.get("/ids", getAllMeterIds)
+	.get("/:meterId/history", getMeterHistory)
+	.get("/:id/latest", getLatestReadings);
 
 module.exports = router;

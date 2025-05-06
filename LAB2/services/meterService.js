@@ -1,98 +1,94 @@
 const Meter = require("../models/meterModel");
 const Tariff = require("../models/tariffModel");
-const mongoose = require("mongoose");
 
-async function calculateBill(previousDay, previousNight, currentDay, currentNight, tariff) {
-  const dayConsumption = currentDay - previousDay;
-  const nightConsumption = currentNight - previousNight;
-  
-  const dayAmount = dayConsumption * tariff.dayRate;
-  const nightAmount = nightConsumption * tariff.nightRate;
-
-  return dayAmount + nightAmount;
+async function calculateBill(prevDay, prevNight, currDay, currNight, tariff) {
+	const day = (currDay - prevDay) * tariff.dayRate;
+	const night = (currNight - prevNight) * tariff.nightRate;
+	return day + night;
 }
 
-async function updateMeterData(meterId, newDayReading, newNightReading) {
-  const meter = await Meter.findOne({ meterId });
-  const tariff = await Tariff.findOne(); 
+async function addMeterData(meterId, newDay, newNight) {
+	const tariff = await Tariff.findOne();
+	if (!tariff) return { error: "Тариф не знайдено" };
 
-  if (!meter) {
-    return { error: "Лічильник не знайдено" };
-  }
+	const last = await Meter.findOne({ meterId }).sort({ date: -1 });
+	if (!last) return { error: "Лічильник не знайдено" };
 
-  if (newDayReading < meter.currentDayReading) {
-    newDayReading = meter.currentDayReading + tariff.dayThreshold;
-  }
-  if (newNightReading < meter.currentNightReading) {
-    newNightReading = meter.currentNightReading + tariff.nightThreshold;
-  }
+	if (newDay < last.currentDayReading)			newDay = last.currentDayReading + tariff.dayOverflow;
+	if (newNight < last.currentNightReading)		newNight = last.currentNightReading + tariff.nightOverflow;
 
-  meter.previousDayReading = meter.currentDayReading;
-  meter.previousNightReading = meter.currentNightReading;
-  meter.currentDayReading = newDayReading;
-  meter.currentNightReading = newNightReading;
-  meter.totalAmount = await calculateBill(
-    meter.previousDayReading,
-    meter.previousNightReading,
-    meter.currentDayReading,
-    meter.currentNightReading,
-    tariff
-  );
-  meter.date = new Date();
+	const totalAmount = await calculateBill(
+		last.currentDayReading,
+		last.currentNightReading,
+		newDay,
+		newNight,
+		tariff
+	);
 
-  await meter.save();
+	const newRecord = new Meter({
+		meterId,
+		previousDayReading: last.currentDayReading,
+		previousNightReading: last.currentNightReading,
+		currentDayReading: newDay,
+		currentNightReading: newNight,
+		totalAmount,
+		date: new Date()
+	});	
 
-  return { meterId: meter.meterId, totalAmount: meter.totalAmount };
+	await newRecord.save();
+	return { meterId, totalAmount };
 }
 
-async function addNewMeter(meterId, dayReading, nightReading) {
-	console.log("Mongoose connected?", mongoose.connection.readyState);
+async function createNewMeter(meterId, dayReading, nightReading) {
+	const exists = await Meter.findOne({ meterId }).sort({ date: -1 });
+	if (exists) return { error: "Лічильник з таким ID вже існує" };
 
-	console.log("Adding new meter:", meterId, dayReading, nightReading);
-	
-  const existingMeter = await Meter.findOne({ meterId });
-  if (existingMeter) {
-	console.log("Meter already exists:", existingMeter);	
-    return { error: "Лічильник з таким ID вже існує" };
-  }
+	const tariff = await Tariff.findOne();
+	if (!tariff) return { error: "Тарифів не знайдено" };
 
-  const tariff = await Tariff.findOne();
-  if (!tariff) {
-    return { error: "Тарифів не знайдено" };
-  }
+	const totalAmount = await calculateBill(0, 0, dayReading, nightReading, tariff);
 
-  const newMeter = new Meter({
-    meterId,
-    previousDayReading: 0,
-    previousNightReading: 0,
-    currentDayReading: dayReading,
-    currentNightReading: nightReading,
-    totalAmount: await calculateBill(0, 0, dayReading, nightReading, tariff),
-    date: new Date()
-  });
+	const newMeter = new Meter({
+		meterId,
+		previousDayReading: 0,
+		previousNightReading: 0,
+		currentDayReading: dayReading,
+		currentNightReading: nightReading,
+		totalAmount,
+		date: new Date()
+	});
 
-  await newMeter.save();
-  console.log("New meter added:", newMeter);
-  return { meterId: newMeter.meterId, totalAmount: newMeter.totalAmount };
+	await newMeter.save();
+	return { meterId, totalAmount };
 }
 
-async function getAllMeters() {
-  return await Meter.find();
-}
+const getAllMeters = () => Meter.find();
 
-async function getAllMeterIds() {
-	const meters = await Meter.find({}, "meterId");
-	return meters.map(m => m.meterId);
-}
+const getAllMeterIds = async () =>		(await Meter.find({}, "meterId")).map(m => m.meterId);
 
-async function getMeterHistory(meterId) {
-	return await Meter.find({ meterId }).sort({ date: -1 });
-}
+const getLatestReadings = async meterId => {
+	const meter = await Meter.findOne({ meterId }).sort({ date: -1 });
+	return meter
+		? {
+			meterId,
+			currentDayReading: meter.currentDayReading,
+			currentNightReading: meter.currentNightReading
+		}
+		: {
+			meterId,
+			currentDayReading: 0,
+			currentNightReading: 0
+		};
+};
+
+const getMeterHistory = meterId =>
+  	Meter.find({ meterId }).sort({ date: -1 });
 
 module.exports = {
-  updateMeterData,
-  addNewMeter,
-  getAllMeters,
-  getAllMeterIds,
-  getMeterHistory
+	addMeterData,
+	createNewMeter,
+	getAllMeters,
+	getAllMeterIds,
+	getLatestReadings,
+	getMeterHistory
 };
