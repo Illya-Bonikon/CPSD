@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 const meterRoutes = require("./routes/meterRoutes");
 const { seedMeters } = require("./seeders/seedMeters");
 const { seedTariff } = require("./seeders/seedTariffs");
+const { initRabbitMQ } = require("./services/rabbitMQService");	
 
 const app = express();
 const PORT = 5000;
@@ -14,10 +15,12 @@ mongoose.connect("mongodb://localhost:27017/metersDB")
 		console.log("Успішно підключено до MongoDB");
 
 		try {
-		await seedTariff();
-		await seedMeters();
+			await seedTariff();
+			await seedMeters();
+			await initRabbitMQ();
+
 		} catch (error) {
-		console.error("Помилка під час задання тестовиз значень:", error);
+			console.error("Помилка під час задання тестовиз значень:", error);
 		}
 		
 		app.listen(PORT, () => {

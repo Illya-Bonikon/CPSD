@@ -3,6 +3,17 @@ const meterService = require("../services/meterService");
 const handleNotFound = (res, message = "Дані не знайдено") => {
 	return res.status(404).json({ error: message });
 };
+const errorHandler = (fn) => {
+	return async (req, res, next) => {
+		try {
+			await fn(req, res, next);
+		} catch (err) {
+			console.error("Помилка в контролері:", err);
+			res.status(500).json({ error: "Внутрішня помилка сервера" });
+		}
+	};
+}
+	
 
 const meterController = {
 	async handleMeterData(req, res) {

@@ -1,5 +1,6 @@
 const Meter = require("../models/meterModel");
 const Tariff = require("../models/tariffModel");
+const { sendToQueue } = require("./rabbitMQService");
 
 async function calculateBill(prevDay, prevNight, currDay, currNight, tariff) {
 	const day = (currDay - prevDay) * tariff.dayRate;
@@ -36,6 +37,7 @@ async function addMeterData(meterId, newDay, newNight) {
 	});	
 
 	await newRecord.save();
+	sendToQueue({ meterId, newDay, newNight, totalAmount });
 	return { meterId, totalAmount };
 }
 
@@ -57,9 +59,9 @@ async function createNewMeter(meterId, dayReading, nightReading) {
 		totalAmount,
 		date: new Date()
 	});
-
+	sendToQueue({ meterId, dayReading, nightReading, totalAmount });
 	await newMeter.save();
-	return { meterId, totalAmount };
+	return { meterId, totalAmount 	};
 }
 
 const getAllMeters = () => Meter.find();
