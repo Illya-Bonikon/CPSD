@@ -1,27 +1,26 @@
-from contextlib import contextmanager
-from typing import Generator, Optional
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import SQLAlchemyError
-from .models import Base
 import logging
 
+from .models import Base
+from typing import Generator, Optional
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine, text
+from contextlib import contextmanager
+
+from core.config import DatabaseConfig
 logger = logging.getLogger(__name__)
 
 class DatabaseError(Exception):
-    """Базовий клас для помилок бази даних"""
     pass
 
 class ConnectionError(DatabaseError):
-    """Помилка підключення до бази даних"""
     pass
 
 class QueryError(DatabaseError):
-    """Помилка виконання запиту"""
     pass
 
 class DatabaseConnection:
-    def __init__(self, config):
+    def __init__(self, config: DatabaseConfig):
         try:
             self.connection_string = config.db.get_connection_string()
             self.engine = create_engine(
@@ -41,7 +40,6 @@ class DatabaseConnection:
             raise ConnectionError(f"Не вдалося ініціалізувати підключення до бази даних: {e}")
         
     def init_db(self) -> bool:
-        """Ініціалізація бази даних"""
         try:
             Base.metadata.create_all(self.engine)
             logger.info("База даних успішно ініціалізована")
@@ -52,7 +50,6 @@ class DatabaseConnection:
             
     @contextmanager
     def get_session(self) -> Generator[Session, None, None]:
-        """Отримання сесії бази даних як контекстного менеджера"""
         session: Optional[Session] = None
         try:
             session = self.Session()
@@ -68,7 +65,6 @@ class DatabaseConnection:
                 session.close()
         
     def health_check(self) -> bool:
-        """Перевірка з'єднання з базою даних"""
         try:
             with self.engine.connect() as conn:
                 with conn.begin():
@@ -79,8 +75,7 @@ class DatabaseConnection:
             logger.error(f"Помилка перевірки з'єднання з базою даних: {e}")
             return False
             
-    def close(self):
-        """Закриття з'єднання з базою даних"""
+    def close(self) -> None:
         try:
             self.engine.dispose()
             logger.info("З'єднання з базою даних закрито")
@@ -89,11 +84,9 @@ class DatabaseConnection:
             raise ConnectionError(f"Не вдалося закрити з'єднання з базою даних: {e}")
             
     def __enter__(self):
-        """Контекстний менеджер для підключення до бази даних"""
         return self
         
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Закриття з'єднання при виході з контексту"""
+    def __exit__(self, exc_type, exc_value, traceback):
         self.close() 
         
 	

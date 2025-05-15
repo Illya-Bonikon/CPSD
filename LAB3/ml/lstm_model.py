@@ -1,30 +1,43 @@
-import numpy as np
-import tensorflow as tf
 import keras
+import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from sklearn.model_selection import KFold
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import joblib
 import os
 
+from datetime import datetime
+from sklearn.model_selection import KFold
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+from core.config import ModelConfig
+
 class TemperatureLSTM:
-    def __init__(self, model_path="models/temperature_lstm.keras"):
-        self.model = None
-        self.sequence_length = 24  # (1 день) (або, якщо потрібно, 48 (2 дні) для прогнозування)
-        self.scaler = None
-        self.model_path = model_path
-        
-        if os.path.exists(model_path):
-            self.model = keras.models.load_model(model_path)
-            self.scaler = joblib.load("models/temperature_scaler.pkl")
+    
+    def __init__(self, config: ModelConfig):
+        self.sequence_length = config.sequence_length
+        self.model_path = config.model_path
+        self.learning_rate = config.learning_rate
+        self.scaler_path = self.model_path.parent / "temperature_scaler.pkl"
+
+        if self.model_path.exists():
+            print(f"Завантаження моделі з {self.model_path}")
+            self.model = keras.models.load_model(self.model_path)
+        else:
+            print(f"Модель не знайдено, створюється нова")
+            self.model = None 
+            
+        if self.scaler_path.exists():
+            print(f"Завантаження scaler з {self.scaler_path}")
+            self.scaler = joblib.load(self.scaler_path)
+        else:
+            print(f"Scaler не знайдено")
+            self.scaler = None
     
     def health_check(self) -> bool:
-        """Перевірка стану моделі"""
+
         try:
             if self.model is None:
                 return False
-            # Перевіряємо, чи модель може робити прогнози
+
             test_input = np.zeros((1, self.sequence_length, 4))
             self.model.predict(test_input, verbose=0)
             return True
@@ -41,38 +54,36 @@ class TemperatureLSTM:
             keras.layers.BatchNormalization(),
             keras.layers.Dropout(0.3),
             keras.layers.Dense(32, activation='relu'),
-            keras.layers.Dense(2)  # Змінюємо на 2 виходи для min і max температури
+            keras.layers.Dense(2)
         ])
         
-        model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001),
-                     loss=keras.losses.Huber(),
-                     metrics=['mae'])
+        model.compile(
+            optimizer=keras.optimizers.Adam(learning_rate=self.learning_rate),
+            loss=keras.losses.Huber(),
+            metrics=['mae']
+        )
         
         self.model = model
         return model
     
     def prepare_data(self, df):
-        print(f"Початкова кількість записів: {len(df)}")
-        
-        # Конвертуємо timestamp в datetime якщо він є індексом
+
         if isinstance(df.index, pd.DatetimeIndex):
             df = df.reset_index()
         
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df.set_index('timestamp', inplace=True)
         
-        # Групуємо за день і знаходимо min/max температуру
         daily_data = df.resample('D').agg({
             'temperature': ['min', 'max']
         })
+        
         print(f"Кількість днів після групування: {len(daily_data)}")
         
-        # Додаємо циклічні ознаки місяця
         daily_data['month'] = daily_data.index.month
         daily_data['month_sin'] = np.sin(2 * np.pi * daily_data['month'] / 12)
         daily_data['month_cos'] = np.cos(2 * np.pi * daily_data['month'] / 12)
         
-        # Нормалізація даних
         if self.scaler is None:
             self.scaler = {
                 'min': {'mean': daily_data[('temperature', 'min')].mean(),
@@ -90,7 +101,6 @@ class TemperatureLSTM:
             'month_cos': daily_data['month_cos']
         })
         
-        # Зменшуємо довжину послідовності для тестових даних
         if len(normalized_data) < self.sequence_length:
             self.sequence_length = len(normalized_data) - 1
         
@@ -106,11 +116,10 @@ class TemperatureLSTM:
             
         return np.array(X), np.array(y)
     
-    def train(self, X, y, epochs=100, batch_size=32, validation_split=0.2, n_splits=5):
+    def train(self, X, y, epochs=100, batch_size=32, n_splits=5):
         if self.model is None:
-            self.create_model((self.sequence_length, 4))  # 4 ознаки: min_temp, max_temp, month_sin, month_cos
+            self.create_model((self.sequence_length, 4)) 
         
-        # Використання KFold для валідації
         kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
         histories = []
         
@@ -124,7 +133,6 @@ class TemperatureLSTM:
             )
             histories.append(history.history)
         
-        # Зберігаємо модель та скалер
         self.model.save(self.model_path)
         joblib.dump(self.scaler, "models/temperature_scaler.pkl")
         
@@ -133,7 +141,6 @@ class TemperatureLSTM:
     def evaluate_model(self, X, y):
         predictions = self.model.predict(X)
         
-        # Денормалізація прогнозів та реальних значень
         denormalized_predictions = []
         denormalized_actual = []
         
@@ -148,7 +155,6 @@ class TemperatureLSTM:
             })
             denormalized_predictions.append(denormalized_pred)
         
-        # Розрахунок метрик
         min_temp_pred = np.array([p['min_temp'] for p in denormalized_predictions])
         max_temp_pred = np.array([p['max_temp'] for p in denormalized_predictions])
         min_temp_actual = np.array([a['min_temp'] for a in denormalized_actual])
@@ -170,11 +176,10 @@ class TemperatureLSTM:
         return metrics
     
     def predict(self, X):
-        """Прогнозування температури"""
         if not self.health_check():
             raise ValueError("Модель не готова до прогнозування")
         predictions = self.model.predict(X, verbose=0)
-        # Сортуємо виходи, щоб перший був меншим (min_temp), а другий більшим (max_temp)
+
         return np.sort(predictions, axis=1)
 
     def predict_year(self, last_sequence):
@@ -186,29 +191,24 @@ class TemperatureLSTM:
             current_date = start_date + pd.Timedelta(days=i)
             month = current_date.month
             
-            # Оновлюємо циклічні ознаки місяця в послідовності
             month_sin = np.sin(2 * np.pi * month / 12)
             month_cos = np.cos(2 * np.pi * month / 12)
-            # Оновлюємо циклічні ознаки для всіх часових кроків у послідовності
+            
             current_sequence[0, :, -2:] = np.array([month_sin, month_cos])
             
             pred = self.model.predict(current_sequence.reshape(1, self.sequence_length, 4), verbose=0)
-            # Сортуємо виходи для забезпечення правильного порядку min/max
             pred = np.sort(pred, axis=1)
-            
-            # Денормалізуємо прогноз
+
             denormalized_pred = {
                 'min_temp': pred[0][0] * self.scaler['min']['std'] + self.scaler['min']['mean'],
                 'max_temp': pred[0][1] * self.scaler['max']['std'] + self.scaler['max']['mean']
             }
             
-            # Оновлюємо послідовність, зберігаючи циклічні ознаки місяця
-            current_sequence = np.roll(current_sequence, -1, axis=1)  # Змінюємо вісь на 1 для часових кроків
-            current_sequence[0, -1, :2] = pred[0]  # Оновлюємо тільки температури в останньому часовому кроці
+            current_sequence = np.roll(current_sequence, -1, axis=1) 
+            current_sequence[0, -1, :2] = pred[0]  
             
             predictions.append(pred[0])
         
-        # Денормалізація прогнозів
         denormalized_predictions = []
         for pred in predictions:
             denormalized_pred = {
