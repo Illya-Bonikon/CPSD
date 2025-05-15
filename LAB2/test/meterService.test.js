@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const meterService = require("../services/meterService");
 
 const mockMeters = [];
@@ -133,9 +132,7 @@ async function runTests() {
 
   } catch (error) {
     console.error("❌ Помилка під час тесту:", error);
-  } finally {
-    console.log("Не вдалося мокнути бд");
-  }
+  } 
 }
 
 runTests();
