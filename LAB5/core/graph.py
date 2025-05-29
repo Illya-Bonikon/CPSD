@@ -3,6 +3,12 @@ import random
 
 class GraphGenerator:
     def __init__(self, n_vertices: int, weight_min: int, weight_max: int):
+        if n_vertices < 3:
+            raise ValueError("Кількість вершин має бути не менше 3")
+        if weight_min < 1:
+            raise ValueError("Мінімальна вага має бути не менше 1")
+        if weight_max < weight_min:
+            raise ValueError("Максимальна вага має бути не менше мінімальної")
         self.n = n_vertices
         self.w_min = weight_min
         self.w_max = weight_max

@@ -15,37 +15,42 @@ class GAIsland(Process):
         self.result_queue = result_queue
 
     def run(self):
-        pop = [self.random_path() for _ in range(self.pop_size)]
-        stats = []
-        for gen in range(self.epochs):
-            fitness = [self.path_length(p) for p in pop]
-            idx_sorted = np.argsort(fitness)
-            best = pop[idx_sorted[0]]
-            second = pop[idx_sorted[1]]
-            worst = pop[idx_sorted[-1]]
-            avg = float(np.mean(fitness))
-            stats.append({
-                'generation': gen,
-                'best': {'path': best.copy(), 'length': fitness[idx_sorted[0]]},
-                'second': {'path': second.copy(), 'length': fitness[idx_sorted[1]]},
-                'worst': {'path': worst.copy(), 'length': fitness[idx_sorted[-1]]},
-                'avg': avg
-            })
-            new_pop = [best.copy()]
-            while len(new_pop) < self.pop_size:
-                p1 = self.tournament(pop, fitness)
-                p2 = self.tournament(pop, fitness)
-                if random.random() < self.cross_prob:
-                    c1, c2 = self.order_crossover(p1, p2)
-                else:
-                    c1, c2 = p1.copy(), p2.copy()
-                if random.random() < self.mut_prob:
-                    self.swap_mutation(c1)
-                if random.random() < self.mut_prob:
-                    self.swap_mutation(c2)
-                new_pop.extend([c1, c2])
-            pop = new_pop[:self.pop_size]
-        self.result_queue.put({'island': self.island_id, 'stats': stats})
+        try:
+            pop = [self.random_path() for _ in range(self.pop_size)]
+            stats = []
+            for gen in range(self.epochs):
+                if len(pop) == 0:
+                    raise ValueError("Популяція порожня! Перевірте параметри популяції.")
+                fitness = [self.path_length(p) for p in pop]
+                idx_sorted = np.argsort(fitness)
+                best = pop[idx_sorted[0]]
+                second = pop[idx_sorted[1]]
+                worst = pop[idx_sorted[-1]]
+                avg = float(np.mean(fitness))
+                stats.append({
+                    'generation': gen,
+                    'best': {'path': best.copy(), 'length': fitness[idx_sorted[0]]},
+                    'second': {'path': second.copy(), 'length': fitness[idx_sorted[1]]},
+                    'worst': {'path': worst.copy(), 'length': fitness[idx_sorted[-1]]},
+                    'avg': avg
+                })
+                new_pop = [best.copy()]
+                while len(new_pop) < self.pop_size:
+                    p1 = self.tournament(pop, fitness)
+                    p2 = self.tournament(pop, fitness)
+                    if random.random() < self.cross_prob:
+                        c1, c2 = self.order_crossover(p1, p2)
+                    else:
+                        c1, c2 = p1.copy(), p2.copy()
+                    if random.random() < self.mut_prob:
+                        self.swap_mutation(c1)
+                    if random.random() < self.mut_prob:
+                        self.swap_mutation(c2)
+                    new_pop.extend([c1, c2])
+                pop = new_pop[:self.pop_size]
+            self.result_queue.put({'island': self.island_id, 'stats': stats})
+        except Exception as e:
+            self.result_queue.put({'island': self.island_id, 'error': str(e)})
 
     def random_path(self):
         path = list(range(self.n))
@@ -102,6 +107,10 @@ class ParallelGA:
         all_stats = [result_queue.get() for _ in islands]
         for island in islands:
             island.join()
+        # Перевірка на помилки з островів
+        for stat in all_stats:
+            if 'error' in stat:
+                raise ValueError(f"GAIsland {stat['island']} error: {stat['error']}")
         merged_stats = []
         for gen in range(self.epochs):
             gen_best = None
