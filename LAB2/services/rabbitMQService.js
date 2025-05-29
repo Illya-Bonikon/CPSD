@@ -16,6 +16,7 @@ async function initRabbitMQ() {
 
 function sendToQueue(data) {
 	if (!channel) return;
+	console.log ("data:" + Buffer.from(JSON.stringify(data)));
 	channel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(data)), {
 		persistent: true
 	});
